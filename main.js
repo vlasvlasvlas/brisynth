@@ -918,6 +918,7 @@ document.querySelector('#delete-rope').addEventListener('click', () => removeRop
 
 document.querySelector('#tension').addEventListener('input', event => {
   if (!selectedRope) return;
+  scareInsectsOnRope(selectedRope);
   selectedRope.tension = Number(event.target.value) / 100;
   setRangeValue('tension', event.target.value);
   rebuildRope(selectedRope);
