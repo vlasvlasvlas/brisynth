@@ -451,6 +451,65 @@ input[type="range"]:focus { outline: 1px solid var(--yellow); }
   background: rgba(255,85,255,0.055);
 }
 
+.rope-mixer-list {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid rgba(85,255,255,0.25);
+}
+
+.rope-mixer-empty {
+  padding: 10px 12px;
+  color: var(--dgray);
+  font-size: 14px;
+}
+
+.rope-mixer-item {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 7px;
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(85,255,255,0.18);
+}
+
+.rope-mixer-item:last-child {
+  border-bottom: 0;
+}
+
+.rope-mixer-item.is-selected {
+  background: rgba(255,255,85,0.08);
+}
+
+.rope-mixer-select {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--cyan);
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rope-mixer-select:hover,
+.rope-mixer-item.is-selected .rope-mixer-select {
+  color: var(--yellow);
+}
+
+.rope-mixer-note {
+  color: var(--white);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  margin-top: 5px;
+}
+
+.rope-sound-select {
+  min-width: 0;
+  font-size: 14px;
+}
+
 .env-row {
   display: flex;
   align-items: center;
@@ -493,6 +552,11 @@ input[type="range"]:focus { outline: 1px solid var(--yellow); }
 .tog-btn[aria-pressed="true"] {
   border-color: var(--green);
   color: var(--green);
+}
+
+#master-mute[aria-pressed="true"] {
+  border-color: var(--red);
+  color: var(--red);
 }
 
 .tog-btn:hover {
