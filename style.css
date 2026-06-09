@@ -505,6 +505,47 @@ input[type="range"]:focus { outline: 1px solid var(--yellow); }
 
 .env-select:focus { outline: 1px solid var(--yellow); }
 
+/* ── Portrait overlay (mobile solamente) ──────────────────────────────────── */
+.portrait-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #000000;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.portrait-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.portrait-icon {
+  font-size: 64px;
+  color: var(--cyan);
+  animation: spin-hint 2.4s ease-in-out infinite;
+}
+
+.portrait-message p {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--yellow);
+  letter-spacing: 0.12em;
+}
+
+@keyframes spin-hint {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  30%            { transform: rotate(90deg); }
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .portrait-overlay { display: flex; }
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 860px) {
   #weather-desc { display: none; }

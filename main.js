@@ -19,6 +19,9 @@ import {
   setScale,
 } from './audio.js';
 
+// ── Device detection ──────────────────────────────────────────────────────────
+const isMobile = window.matchMedia('(pointer: coarse)').matches;
+
 // ── Renderer ──────────────────────────────────────────────────────────────────
 const canvas = document.querySelector('#webgl-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -161,7 +164,7 @@ function createGrate(side) {
     group.add(bolt);
 
     const hitbox = new THREE.Mesh(
-      new THREE.SphereGeometry(0.38, 8, 6),
+      new THREE.SphereGeometry(isMobile ? 0.70 : 0.38, 8, 6),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }),
     );
     hitbox.position.set(x + sign * 0.64, y, 0.18);
@@ -486,8 +489,9 @@ function clearDraft() {
 //  POINTER
 // ═════════════════════════════════════════════════════════════════════════════
 function updatePointer(event) {
+  const yOffset = event.pointerType === 'touch' ? 60 : 0;
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  pointer.y = -((event.clientY - yOffset) / window.innerHeight) * 2 + 1;
   pointerSpeed = Math.hypot(pointer.x - previousPointer.x, pointer.y - previousPointer.y) * 24;
   previousPointer.copy(pointer);
   raycaster.setFromCamera(pointer, camera);
