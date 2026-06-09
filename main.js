@@ -235,6 +235,12 @@ function ropePointAt(rope, t, time = 0) {
   return curve.getPoint(THREE.MathUtils.clamp(t, 0, 1));
 }
 
+function ropeAngleAt(rope, t, time = 0) {
+  const before = ropePointAt(rope, t - 0.015, time);
+  const after = ropePointAt(rope, t + 0.015, time);
+  return Math.atan2(after.y - before.y, after.x - before.x);
+}
+
 function rebuildRope(rope, time = 0) {
   const curve = new THREE.CatmullRomCurve3(ropePoints(rope, time));
   const geo   = new THREE.TubeGeometry(curve, 60, rope === selectedRope ? 0.078 : 0.062, 8, false);
@@ -432,7 +438,9 @@ function createInsect(index) {
   const sprite = new THREE.Sprite(material);
   const baseScale = THREE.MathUtils.randFloat(0.82, 1.15);
   sprite.scale.set(baseScale, baseScale, 1);
-  sprite.center.set(0.5, 0.22);
+  // El arte ocupa el centro de cada celda del atlas; 0.40 alinea su base visible
+  // con la posición física en vez de apoyar el margen transparente.
+  sprite.center.set(0.5, 0.40);
   sprite.position.copy(randomInsectWaypoint());
   sprite.position.x = Math.random() < 0.5 ? -10 : 10;
   world.add(sprite);
@@ -522,13 +530,14 @@ function updateInsects(delta, time) {
 
       const point = ropePointAt(insect.rope, insect.ropeT, time);
       insect.sprite.position.copy(point);
-      insect.sprite.position.y += 0.10;
+      insect.sprite.position.y += 0.025;
       insect.sprite.position.z = 0.78;
       insect.sprite.scale.set(
         insect.baseScale * (0.96 + Math.sin(insect.phase) * 0.025),
         insect.baseScale,
         1,
       );
+      insect.sprite.material.rotation = ropeAngleAt(insect.rope, insect.ropeT, time);
       insect.perchTime -= delta;
 
       const gust = windEnabled && Math.random() < delta * windStrength * 0.48;
@@ -566,7 +575,9 @@ function updateInsects(delta, time) {
     insect.sprite.position.addScaledVector(insect.velocity, delta);
     const flap = 0.72 + Math.abs(Math.sin(insect.phase)) * 0.28;
     insect.sprite.scale.set(insect.baseScale, insect.baseScale * flap, 1);
-    insect.sprite.material.rotation = Math.sin(insect.phase * 0.31) * 0.08;
+    insect.sprite.material.rotation =
+      THREE.MathUtils.clamp(insect.velocity.y * 0.09, -0.24, 0.24)
+      + Math.sin(insect.phase * 0.31) * 0.06;
 
     if (insect.rope && distance < 0.24 && insect.flightAge > 0.65) landInsect(insect, time);
   });
