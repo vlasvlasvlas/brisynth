@@ -210,9 +210,9 @@ function createRopeTexture(color, variant = 0) {
   textureCanvas.height = 8;
   const textureCtx = textureCanvas.getContext('2d');
   const base = new THREE.Color(color);
-  const light = base.clone().offsetHSL(0.015, -0.04, 0.16);
-  const shadow = base.clone().offsetHSL(-0.01, 0.04, -0.18);
-  const deep = base.clone().offsetHSL(-0.02, 0.06, -0.28);
+  const light = base.clone().offsetHSL(0.01, -0.025, 0.075);
+  const shadow = base.clone().offsetHSL(-0.005, 0.02, -0.075);
+  const deep = base.clone().offsetHSL(-0.01, 0.03, -0.12);
   const colors = {
     base: `#${base.getHexString()}`,
     light: `#${light.getHexString()}`,
@@ -227,8 +227,8 @@ function createRopeTexture(color, variant = 0) {
       const twist = (x + y * 2 + phase) % 12;
       textureCtx.fillStyle =
         twist < 2 ? colors.light
-        : twist < 8 ? colors.base
-        : twist < 10 ? colors.shadow
+        : twist < 9 ? colors.base
+        : twist < 11 ? colors.shadow
         : colors.deep;
       textureCtx.fillRect(x, y, 1, 1);
     }
@@ -238,7 +238,7 @@ function createRopeTexture(color, variant = 0) {
   textureCtx.fillStyle = colors.light;
   textureCtx.fillRect((3 + phase) % 24, 1, 2, 1);
   textureCtx.fillRect((15 + phase) % 24, 6, 2, 1);
-  textureCtx.fillStyle = colors.deep;
+  textureCtx.fillStyle = colors.shadow;
   textureCtx.fillRect((9 + phase) % 24, 4, 2, 1);
   textureCtx.fillRect((20 + phase) % 24, 2, 1, 1);
 
