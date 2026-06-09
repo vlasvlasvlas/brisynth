@@ -1,4 +1,4 @@
-# ROPESYNTH
+# BRISYNTH
 
 Instrumento musical interactivo. Cuerdas de yute tensadas entre las rejas de hierro de un balcón de ciudad.
 
@@ -24,4 +24,4 @@ La ciudad de fondo es pixel-art generativa — reacciona a la hora local y al cl
 
 ## Demo
 
-[vlasvlasvlas.github.io/ropesynth](https://vlasvlasvlas.github.io/ropesynth)
+[vlasvlasvlas.github.io/brisynth](https://vlasvlasvlas.github.io/brisynth)
