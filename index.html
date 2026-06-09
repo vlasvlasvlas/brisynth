@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>ROPESYNTH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <main id="app">
+      <!-- Ciudad pixel-art (fondo) -->
+      <canvas id="city-canvas" aria-hidden="true"></canvas>
+      <!-- Escena 3D (transparente sobre la ciudad) -->
+      <canvas id="webgl-canvas" aria-label="Instrumento de cuerdas"></canvas>
+
+      <header class="topbar">
+        <div class="identity">
+          <h1>ROPESYNTH</h1>
+        </div>
+        <div class="top-actions">
+          <span id="weather-desc"></span>
+          <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="false">
+            <span class="sound-bars"><i></i><i></i><i></i></span>
+            sonido
+          </button>
+          <button id="env-toggle" class="sound-toggle" type="button" aria-pressed="false">
+            ENV
+          </button>
+          <button id="about-toggle" class="sound-toggle" type="button" aria-label="Acerca de">
+            ?
+          </button>
+        </div>
+      </header>
+
+      <!-- Modal about -->
+      <div id="about-overlay" class="about-overlay" aria-hidden="true">
+        <div class="about-modal" role="dialog" aria-modal="true">
+          <div class="about-title">ROPESYNTH</div>
+          <div class="about-body">
+            <p>Instrumento de cuerdas de yute tensadas sobre un balcón urbano.</p>
+            <p>Arrastrá desde los ganchos de la reja izquierda hasta la derecha para crear cuerdas. Tocálas, ajustá tensión, sumá lluvia y viento.</p>
+            <p>Síntesis de audio generativa con Web Audio API. Ciudad pixel-art reactiva al clima real y la hora local.</p>
+          </div>
+          <a class="about-link" href="https://github.com/vlasvlavlas/ropesynth" target="_blank" rel="noopener">
+            github.com/vlasvlavlas/ropesynth
+          </a>
+          <button id="about-close" class="about-close" type="button">[CERRAR]</button>
+        </div>
+      </div>
+
+      <!-- Panel lateral de entorno -->
+      <aside id="env-panel" class="env-panel" aria-hidden="true">
+        <div class="env-header">ENTORNO</div>
+
+        <div class="env-section">
+          <div class="env-row">
+            <span>VIENTO</span>
+            <button id="wind-toggle" class="tog-btn" type="button" aria-pressed="false">OFF</button>
+          </div>
+          <input id="wind-speed" class="env-slider" type="range" min="0" max="100" value="40" disabled>
+          <div class="env-hint">velocidad</div>
+        </div>
+
+        <div class="env-section">
+          <div class="env-row">
+            <span>LLUVIA</span>
+            <button id="rain-toggle" class="tog-btn" type="button" aria-pressed="false">OFF</button>
+          </div>
+          <input id="rain-intensity" class="env-slider" type="range" min="0" max="100" value="55" disabled>
+          <div class="env-hint">intensidad</div>
+        </div>
+
+        <div class="env-section">
+          <div class="env-label">ESCALA</div>
+          <select id="scale-select" class="env-select">
+            <option value="pentatonicMinor">PENTATONICA</option>
+            <option value="major">MAYOR</option>
+            <option value="blues">BLUES</option>
+            <option value="arabic">ARABE</option>
+            <option value="japanese">JAPONESA</option>
+            <option value="chromatic">CROMATICA</option>
+          </select>
+        </div>
+
+        <div class="env-section">
+          <div class="env-label">RESORTE</div>
+          <input id="springiness" class="env-slider" type="range" min="0" max="100" value="22">
+          <div class="env-hint">muerta · elástica</div>
+        </div>
+
+        <div class="env-section">
+          <div class="env-label">ZOOM</div>
+          <input id="cam-zoom" class="env-slider" type="range" min="0" max="100" value="90">
+          <div class="env-hint">lejos · cerca</div>
+        </div>
+      </aside>
+
+      <section class="guide" id="instruction-card" aria-live="polite">
+        <span id="step-number"></span>
+        <div>
+          <strong id="instruction-title"></strong>
+          <p id="instruction-copy"></p>
+        </div>
+      </section>
+
+      <section class="fiber-editor is-disabled" id="rope-controls">
+        <div class="fiber-identity">
+          <span id="panel-title">---</span>
+          <strong id="note-name">--</strong>
+          <small><span id="rope-count">00</span> cuerdas</small>
+        </div>
+        <label class="parameter" for="tension">
+          <span>tension <output id="tension-value">65</output></span>
+          <input id="tension" type="range" min="15" max="100" value="65">
+        </label>
+        <label class="parameter" for="damping">
+          <span>decay <output id="damping-value">70</output></span>
+          <input id="damping" type="range" min="20" max="96" value="70">
+        </label>
+        <label class="parameter" for="tone">
+          <span>tone <output id="tone-value">fiber</output></span>
+          <input id="tone" type="range" min="0" max="100" value="45">
+        </label>
+        <button class="delete-button" id="delete-rope" type="button" aria-label="Eliminar cuerda">[x]</button>
+      </section>
+
+      <div class="status" id="status-pill"><span></span></div>
+    </main>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
