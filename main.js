@@ -582,7 +582,7 @@ function updateInsects(delta, time) {
 
       const point = ropePointAt(insect.rope, insect.ropeT, time);
       insect.sprite.position.copy(point);
-      insect.sprite.position.y += 0.025;
+      insect.sprite.position.y += 0.085;
       insect.sprite.position.z = 0.78;
       insect.sprite.scale.set(
         insect.baseScale * (0.96 + Math.sin(insect.phase) * 0.025),
