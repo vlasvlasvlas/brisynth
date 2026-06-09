@@ -204,6 +204,55 @@ function ropeColor(id) {
   return colors[id % colors.length];
 }
 
+function createRopeTexture(color, variant = 0) {
+  const textureCanvas = document.createElement('canvas');
+  textureCanvas.width = 24;
+  textureCanvas.height = 8;
+  const textureCtx = textureCanvas.getContext('2d');
+  const base = new THREE.Color(color);
+  const light = base.clone().offsetHSL(0.015, -0.04, 0.16);
+  const shadow = base.clone().offsetHSL(-0.01, 0.04, -0.18);
+  const deep = base.clone().offsetHSL(-0.02, 0.06, -0.28);
+  const colors = {
+    base: `#${base.getHexString()}`,
+    light: `#${light.getHexString()}`,
+    shadow: `#${shadow.getHexString()}`,
+    deep: `#${deep.getHexString()}`,
+  };
+  const phase = Math.abs(Math.floor(variant * 3)) % 12;
+
+  // Bandas diagonales escalonadas: cada vuelta parece un cabo de yute torcido.
+  for (let y = 0; y < textureCanvas.height; y++) {
+    for (let x = 0; x < textureCanvas.width; x++) {
+      const twist = (x + y * 2 + phase) % 12;
+      textureCtx.fillStyle =
+        twist < 2 ? colors.light
+        : twist < 8 ? colors.base
+        : twist < 10 ? colors.shadow
+        : colors.deep;
+      textureCtx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  // Fibras sueltas, también en píxeles enteros.
+  textureCtx.fillStyle = colors.light;
+  textureCtx.fillRect((3 + phase) % 24, 1, 2, 1);
+  textureCtx.fillRect((15 + phase) % 24, 6, 2, 1);
+  textureCtx.fillStyle = colors.deep;
+  textureCtx.fillRect((9 + phase) % 24, 4, 2, 1);
+  textureCtx.fillRect((20 + phase) % 24, 2, 1, 1);
+
+  const texture = new THREE.CanvasTexture(textureCanvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.repeat.set(22, 1);
+  return texture;
+}
+
 function ropePoints(rope, time = 0) {
   const points   = [];
   const segments = 28;
@@ -243,7 +292,7 @@ function ropeAngleAt(rope, t, time = 0) {
 
 function rebuildRope(rope, time = 0) {
   const curve = new THREE.CatmullRomCurve3(ropePoints(rope, time));
-  const geo   = new THREE.TubeGeometry(curve, 60, rope === selectedRope ? 0.078 : 0.062, 8, false);
+  const geo   = new THREE.TubeGeometry(curve, 60, rope === selectedRope ? 0.080 : 0.064, 6, false);
   if (rope.mesh.geometry) rope.mesh.geometry.dispose();
   rope.mesh.geometry = geo;
   rope.mesh.userData.rope = rope;
@@ -271,12 +320,7 @@ function createKnot(position, color) {
 function applyWetMaterial(rope, wet) {
   rope.mesh.material.roughness = wet ? 0.50 : 0.92;
   rope.mesh.material.metalness = wet ? 0.08 : 0.0;
-  if (wet) {
-    const base = new THREE.Color(rope.baseColor);
-    rope.mesh.material.color.set(base.multiplyScalar(0.70));
-  } else {
-    rope.mesh.material.color.setHex(rope.baseColor);
-  }
+  rope.mesh.material.color.setHex(wet ? 0x9a9a9a : 0xffffff);
 }
 
 function createRope(startAnchor, endAnchor, physicalTension = 0.65) {
@@ -284,15 +328,24 @@ function createRope(startAnchor, endAnchor, physicalTension = 0.65) {
   const start = startAnchor.position.clone();
   const end   = endAnchor.position.clone();
   const col   = ropeColor(id);
+  const variant =
+    (startAnchor.userData.index - endAnchor.userData.index) * 0.58
+    + (startAnchor.userData.index + endAnchor.userData.index - 8) * 0.34
+    + id * 0.46;
+  const ropeTexture = createRopeTexture(col, variant);
   const mat   = new THREE.MeshStandardMaterial({
-    color: col, roughness: 0.92, metalness: 0.0,
-    emissive: col, emissiveIntensity: 0.08,
+    color: 0xffffff,
+    map: ropeTexture,
+    roughness: 0.94,
+    metalness: 0.0,
+    emissive: new THREE.Color(col).multiplyScalar(0.22),
+    emissiveIntensity: 0.035,
   });
   const mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat);
   const glow = new THREE.Mesh(
     new THREE.BufferGeometry(),
     new THREE.MeshBasicMaterial({
-      color: col, transparent: true, opacity: 0.04,
+      color: col, transparent: true, opacity: 0.018,
       depthWrite: false, blending: THREE.AdditiveBlending,
     }),
   );
@@ -308,10 +361,8 @@ function createRope(startAnchor, endAnchor, physicalTension = 0.65) {
     vibrationAge: 0,
     frequency:    15,
     length:       start.distanceTo(end),
-    variant:
-      (startAnchor.userData.index - endAnchor.userData.index) * 0.58
-      + (startAnchor.userData.index + endAnchor.userData.index - 8) * 0.34
-      + id * 0.46,
+    variant,
+    ropeTexture,
     knotA:    createKnot(start, col),
     knotB:    createKnot(end,   col),
     lastPluck: 0,
@@ -333,6 +384,7 @@ function removeRope(rope) {
     .forEach(insect => launchInsect(insect, rope));
   world.remove(rope.mesh, rope.glow, rope.knotA, rope.knotB);
   rope.mesh.geometry.dispose(); rope.mesh.material.dispose();
+  rope.ropeTexture?.dispose();
   rope.glow.geometry.dispose(); rope.glow.material.dispose();
   const i = ropes.indexOf(rope);
   if (i >= 0) ropes.splice(i, 1);
@@ -589,8 +641,8 @@ function updateInsects(delta, time) {
 function selectRope(rope) {
   selectedRope = rope;
   ropes.forEach(r => {
-    r.mesh.material.emissiveIntensity = r === rope ? 0.28 : 0.08;
-    r.glow.material.opacity = r === rope ? 0.09 : 0.04;
+    r.mesh.material.emissiveIntensity = r === rope ? 0.11 : 0.035;
+    r.glow.material.opacity = r === rope ? 0.045 : 0.018;
     rebuildRope(r);
   });
 
@@ -743,8 +795,8 @@ function resetHover() {
   });
   ropes.forEach(r => {
     if (r !== selectedRope) {
-      r.mesh.material.emissiveIntensity = 0.08;
-      r.glow.material.opacity = 0.04;
+      r.mesh.material.emissiveIntensity = 0.035;
+      r.glow.material.opacity = 0.018;
     }
   });
 }
@@ -776,8 +828,8 @@ window.addEventListener('pointermove', event => {
     const ropeHit = raycaster.intersectObjects(ropes.map(r => r.mesh), false)[0];
     if (ropeHit) {
       hoveredRope = ropeHit.object.userData.rope;
-      hoveredRope.mesh.material.emissiveIntensity = 0.55;
-      hoveredRope.glow.material.opacity = 0.10;
+      hoveredRope.mesh.material.emissiveIntensity = 0.16;
+      hoveredRope.glow.material.opacity = 0.055;
       if (!leftHit && !insectHit) canvas.style.cursor = 'pointer';
 
       if (pointerSpeed > 0.07) {
