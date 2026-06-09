@@ -41,7 +41,7 @@
           <div class="about-title">BRISYNTH</div>
           <div class="about-body">
             <p>Instrumento de cuerdas de yute tensadas sobre un balcón urbano.</p>
-            <p>Arrastrá desde los ganchos de la reja izquierda hasta la derecha para crear cuerdas. Tocálas, ajustá tensión, sumá lluvia y viento.</p>
+            <p>Hacé click o touch en un gancho izquierdo y luego en uno derecho para crear una cuerda. Tocálas, ajustá tensión y componé con el clima y las mariposas.</p>
             <p>Síntesis de audio generativa con Web Audio API. Ciudad pixel-art reactiva al clima real y la hora local.</p>
           </div>
           <a class="about-link" href="https://github.com/vlasvlasvlas/brisynth" target="_blank" rel="noopener">
@@ -53,8 +53,12 @@
 
       <!-- Panel lateral de entorno -->
       <aside id="env-panel" class="env-panel" aria-hidden="true">
-        <div class="env-header">ENTORNO</div>
+        <div class="env-header">
+          <span>ECOSISTEMA</span>
+          <small>generador ambiental</small>
+        </div>
 
+        <div class="env-group-label">CLIMA</div>
         <div class="env-section">
           <div class="env-row">
             <span>VIENTO</span>
@@ -73,6 +77,18 @@
           <div class="env-hint">intensidad</div>
         </div>
 
+        <div class="env-group-label">FAUNA</div>
+        <div class="env-section env-section-feature">
+          <div class="env-row">
+            <span>MARIPOSAS</span>
+            <button id="fauna-toggle" class="tog-btn" type="button" aria-pressed="true">ON</button>
+          </div>
+          <input id="fauna-density" class="env-slider" type="range" min="0" max="100" value="42">
+          <div class="env-hint">pocas · bandada</div>
+          <p class="env-copy">Aterrizan y pulsan las cuerdas. Tocálas para cambiar su rumbo.</p>
+        </div>
+
+        <div class="env-group-label">MUSICA</div>
         <div class="env-section">
           <div class="env-label">ESCALA</div>
           <select id="scale-select" class="env-select">
@@ -85,6 +101,7 @@
           </select>
         </div>
 
+        <div class="env-group-label">ESCENA</div>
         <div class="env-section">
           <div class="env-label">RESORTE</div>
           <input id="springiness" class="env-slider" type="range" min="0" max="100" value="22">
@@ -115,10 +132,6 @@
         <label class="parameter" for="tension">
           <span>tension <output id="tension-value">65</output></span>
           <input id="tension" type="range" min="15" max="100" value="65">
-        </label>
-        <label class="parameter" for="damping">
-          <span>decay <output id="damping-value">70</output></span>
-          <input id="damping" type="range" min="20" max="96" value="70">
         </label>
         <label class="parameter" for="tone">
           <span>tone <output id="tone-value">fiber</output></span>

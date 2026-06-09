@@ -49,6 +49,30 @@ function genWinLayouts(buildings) {
 const BUILDINGS = genBuildings();
 const WIN_LAYOUTS = genWinLayouts(BUILDINGS);
 
+// ── Nubes persistentes en tres planos de parallax ────────────────────────────
+const CLOUD_LAYERS = [
+  { stepMs: 12000, alpha: 0.34, scale: 0.70, yMin: 7,  yMax: 28 },
+  { stepMs: 8000,  alpha: 0.46, scale: 0.88, yMin: 18, yMax: 45 },
+  { stepMs: 5200,  alpha: 0.58, scale: 1.10, yMin: 30, yMax: 62 },
+];
+
+function genClouds() {
+  const r = prng(0xc100d55e);
+  return Array.from({ length: 8 }, (_, index) => {
+    const layer = index % CLOUD_LAYERS.length;
+    const config = CLOUD_LAYERS[layer];
+    return {
+      layer,
+      x: Math.floor(r() * (W + 80) - 40),
+      y: Math.floor(config.yMin + r() * (config.yMax - config.yMin)),
+      w: Math.floor((r() * 38 + 24) * config.scale),
+      h: Math.max(4, Math.floor((r() * 8 + 6) * config.scale)),
+    };
+  });
+}
+
+const CLOUDS = genClouds();
+
 // ── Paletas por hora ─────────────────────────────────────────────────────────
 const PALETTES = {
   night:    { sky: ['#030318','#05051e','#070726','#09092c','#0b0c30','#0d0e34'], wall: ['#0c0e20','#090b1a'], litWin: true,  win: ['#f0d448','#c8a030','#e8c038','#886618'] },
@@ -92,6 +116,7 @@ let dirty = false;
 let curHour = 21, curTemp = 20, curCloud = 30;
 let rainIntensity = 0;
 let lastTs = 0;
+let lastCloudMotionKey = '';
 
 function initWinStates() {
   const r = prng(0xaa55_bbcc);
@@ -138,6 +163,14 @@ export function setRain(intensity) {
 
 export function tickCity(ts) {
   lastTs = ts;
+  const cloudMotionKey = CLOUD_LAYERS
+    .map(layer => Math.floor(lastTs / layer.stepMs))
+    .join(':');
+  if (cloudMotionKey !== lastCloudMotionKey) {
+    lastCloudMotionKey = cloudMotionKey;
+    dirty = true;
+  }
+
   if (ts - lastFlicker > 1400 + Math.random() * 1200) {
     lastFlicker = ts;
     winLit.forEach(bw => {
@@ -468,18 +501,21 @@ function _drawClouds(cloud, pn) {
   const isNight = ['night','evening','dusk'].includes(pn);
   const isSunset = pn === 'sunset' || pn === 'dusk';
   const n = Math.min(8, Math.ceil(cloud / 15));
-  const r = prng(0xc100d55e);
 
   for (let c = 0; c < n; c++) {
-    const cx = Math.floor(r() * (W + 60) - 30);
-    const cy = Math.floor(r() * H * 0.36);
-    const cw = Math.floor(r() * 48 + 22);
-    const ch = Math.floor(r() * 10 + 5);
+    const cloudData = CLOUDS[c];
+    const layer = CLOUD_LAYERS[cloudData.layer];
+    const step = Math.floor(lastTs / layer.stepMs);
+    const span = W + cloudData.w + 24;
+    const cx = ((cloudData.x + step + cloudData.w + 12) % span) - cloudData.w - 12;
+    const cy = cloudData.y;
+    const cw = cloudData.w;
+    const ch = cloudData.h;
 
     let col;
-    if (isNight)       col = 'rgba(15,12,28,0.68)';
-    else if (isSunset) col = 'rgba(165,58,28,0.55)';
-    else               col = 'rgba(182,202,222,0.58)';
+    if (isNight)       col = `rgba(15,12,28,${layer.alpha + 0.10})`;
+    else if (isSunset) col = `rgba(165,58,28,${layer.alpha})`;
+    else               col = `rgba(182,202,222,${layer.alpha})`;
 
     ctx.fillStyle = col;
     ctx.fillRect(cx,      cy + 3,  cw,     ch);
@@ -487,7 +523,7 @@ function _drawClouds(cloud, pn) {
     ctx.fillRect(cx + 10, cy - 3,  cw - 20, ch + 2);
 
     if (!isNight) {
-      ctx.fillStyle = 'rgba(218,232,248,0.42)';
+      ctx.fillStyle = `rgba(218,232,248,${layer.alpha * 0.72})`;
       ctx.fillRect(cx + 4, cy, cw - 8, 2);
     }
   }
