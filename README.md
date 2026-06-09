@@ -24,4 +24,4 @@ La ciudad de fondo es pixel-art generativa — reacciona a la hora local y al cl
 
 ## Demo
 
-[vlasvlavlas.github.io/ropesynth](https://vlasvlavlas.github.io/ropesynth)
+[vlasvlasvlas.github.io/ropesynth](https://vlasvlasvlas.github.io/ropesynth)
