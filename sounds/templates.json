@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "rhodes",
+      "name": "Rhodes",
+      "description": "Piano electrico calido, con ataque de martillo y tremolo suave.",
+      "level": 0.9,
+      "envelope": { "attack": 0.004, "duration": 3.6, "curve": 1.15 },
+      "filter": { "type": "lowpass", "frequency": 2300, "toneAmount": 3600, "q": 0.8 },
+      "partials": [
+        { "ratio": 1, "wave": "sine", "gain": 1, "decay": 1 },
+        { "ratio": 2, "wave": "sine", "gain": 0.42, "decay": 0.72 },
+        { "ratio": 3, "wave": "triangle", "gain": 0.16, "decay": 0.45 },
+        { "ratio": 4.02, "wave": "sine", "gain": 0.1, "decay": 0.34 }
+      ],
+      "noise": { "amount": 0.11, "duration": 0.025, "frequency": 1800, "q": 0.8 },
+      "lfo": { "target": "gain", "frequency": 4.8, "amount": 0.09 },
+      "sends": { "dry": 0.9, "reverb": 0.2, "delay": 0.08 }
+    },
+    {
+      "id": "space-lady",
+      "name": "Space Lady",
+      "description": "Organo espacial fragil, vibrato profundo y eco largo.",
+      "level": 0.72,
+      "envelope": { "attack": 0.025, "duration": 4.8, "curve": 0.72 },
+      "filter": { "type": "lowpass", "frequency": 1500, "toneAmount": 2800, "q": 1.6 },
+      "partials": [
+        { "ratio": 1, "wave": "square", "gain": 0.7, "decay": 1 },
+        { "ratio": 2, "wave": "sine", "gain": 0.34, "decay": 0.9 },
+        { "ratio": 0.5, "wave": "triangle", "gain": 0.22, "decay": 1.1 }
+      ],
+      "lfo": { "target": "pitch", "frequency": 5.7, "amount": 18 },
+      "sends": { "dry": 0.56, "reverb": 0.62, "delay": 0.5 }
+    },
+    {
+      "id": "cosmos-vangelis",
+      "name": "Cosmos Vangelis",
+      "description": "Pad analogico amplio, lento y cinematografico.",
+      "level": 0.62,
+      "envelope": { "attack": 0.11, "duration": 6.4, "curve": 0.58 },
+      "filter": { "type": "lowpass", "frequency": 720, "toneAmount": 3300, "q": 2.4 },
+      "partials": [
+        { "ratio": 1, "wave": "sawtooth", "gain": 0.64, "decay": 1, "detune": -8 },
+        { "ratio": 1, "wave": "sawtooth", "gain": 0.58, "decay": 1.04, "detune": 8 },
+        { "ratio": 0.5, "wave": "triangle", "gain": 0.34, "decay": 1.15 },
+        { "ratio": 2, "wave": "sine", "gain": 0.16, "decay": 0.72 }
+      ],
+      "lfo": { "target": "filter", "frequency": 0.18, "amount": 420 },
+      "sends": { "dry": 0.58, "reverb": 0.7, "delay": 0.28 }
+    },
+    {
+      "id": "laurie-spiegel",
+      "name": "Laurie Spiegel",
+      "description": "Parciales digitales cristalinos y movimiento microtonal.",
+      "level": 0.68,
+      "envelope": { "attack": 0.012, "duration": 5.2, "curve": 0.86 },
+      "filter": { "type": "highpass", "frequency": 110, "toneAmount": 360, "q": 0.6 },
+      "partials": [
+        { "ratio": 1, "wave": "sine", "gain": 0.8, "decay": 1 },
+        { "ratio": 1.502, "wave": "sine", "gain": 0.34, "decay": 0.82 },
+        { "ratio": 2.01, "wave": "triangle", "gain": 0.3, "decay": 0.68 },
+        { "ratio": 2.997, "wave": "sine", "gain": 0.2, "decay": 0.54 },
+        { "ratio": 4.08, "wave": "sine", "gain": 0.12, "decay": 0.4 }
+      ],
+      "fm": { "ratio": 2.001, "index": 0.38 },
+      "lfo": { "target": "pitch", "frequency": 0.31, "amount": 5 },
+      "sends": { "dry": 0.66, "reverb": 0.54, "delay": 0.38 }
+    },
+    {
+      "id": "moroder",
+      "name": "Moroder",
+      "description": "Bajo secuenciado compacto, brillante y con golpe rapido.",
+      "level": 0.76,
+      "transpose": -12,
+      "envelope": { "attack": 0.003, "duration": 1.45, "curve": 1.8 },
+      "filter": { "type": "lowpass", "frequency": 420, "toneAmount": 2500, "q": 7.5 },
+      "partials": [
+        { "ratio": 1, "wave": "sawtooth", "gain": 0.78, "decay": 1 },
+        { "ratio": 1, "wave": "square", "gain": 0.3, "decay": 0.72, "detune": 4 },
+        { "ratio": 0.5, "wave": "sine", "gain": 0.42, "decay": 1.08 }
+      ],
+      "pitchEnvelope": { "semitones": 5, "duration": 0.055 },
+      "noise": { "amount": 0.06, "duration": 0.018, "frequency": 900, "q": 1.4 },
+      "sends": { "dry": 0.88, "reverb": 0.12, "delay": 0.28 }
+    },
+    {
+      "id": "campanas",
+      "name": "Campanas",
+      "description": "Campanas metalicas inarmonicas, luminosas y resonantes.",
+      "level": 0.58,
+      "envelope": { "attack": 0.002, "duration": 7.2, "curve": 0.72 },
+      "filter": { "type": "highpass", "frequency": 260, "toneAmount": 900, "q": 0.8 },
+      "partials": [
+        { "ratio": 1, "wave": "sine", "gain": 0.7, "decay": 1 },
+        { "ratio": 2.01, "wave": "sine", "gain": 0.42, "decay": 0.8 },
+        { "ratio": 2.71, "wave": "sine", "gain": 0.38, "decay": 0.68 },
+        { "ratio": 4.08, "wave": "sine", "gain": 0.24, "decay": 0.55 },
+        { "ratio": 5.43, "wave": "sine", "gain": 0.16, "decay": 0.42 },
+        { "ratio": 6.79, "wave": "sine", "gain": 0.1, "decay": 0.34 }
+      ],
+      "fm": { "ratio": 1.414, "index": 0.22 },
+      "sends": { "dry": 0.52, "reverb": 0.78, "delay": 0.36 }
+    },
+    {
+      "id": "moog",
+      "name": "Moog",
+      "description": "Sintetizador analogico redondo con filtro resonante.",
+      "level": 0.72,
+      "transpose": -5,
+      "envelope": { "attack": 0.008, "duration": 2.8, "curve": 1.25 },
+      "filter": { "type": "lowpass", "frequency": 360, "toneAmount": 3200, "q": 9 },
+      "partials": [
+        { "ratio": 1, "wave": "sawtooth", "gain": 0.68, "decay": 1, "detune": -5 },
+        { "ratio": 1, "wave": "sawtooth", "gain": 0.62, "decay": 0.95, "detune": 5 },
+        { "ratio": 0.5, "wave": "square", "gain": 0.28, "decay": 1.12 },
+        { "ratio": 2, "wave": "triangle", "gain": 0.14, "decay": 0.62 }
+      ],
+      "pitchEnvelope": { "semitones": 2, "duration": 0.08 },
+      "sends": { "dry": 0.86, "reverb": 0.2, "delay": 0.14 }
+    }
+  ]
+}

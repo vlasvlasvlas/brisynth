@@ -17,6 +17,11 @@ import {
   stopWindDrone,
   rainDropSound,
   setScale,
+  getSoundTemplates,
+  randomSoundTemplate,
+  setMasterVolume,
+  setMasterReverb,
+  setMasterDelay,
 } from './audio.js';
 
 // ── Device detection ──────────────────────────────────────────────────────────
@@ -53,6 +58,7 @@ const ANCHOR_LEVELS = [-4.4, -3.3, -2.2, -1.1, 0, 1.1, 2.2, 3.3, 4.4];
 // ── Estado global ─────────────────────────────────────────────────────────────
 const ropes   = [];
 const anchors = { left: [], right: [] };
+const soundTemplates = getSoundTemplates();
 let selectedRope  = null;
 let hoveredAnchor = null;
 let hoveredRope   = null;
@@ -362,6 +368,7 @@ function createRope(startAnchor, endAnchor, physicalTension = 0.65) {
     frequency:    15,
     length:       start.distanceTo(end),
     variant,
+    soundId:      randomSoundTemplate(),
     ropeTexture,
     knotA:    createKnot(start, col),
     knotB:    createKnot(end,   col),
@@ -400,7 +407,16 @@ function pluck(rope, strength = 0.7) {
                   + strength * THREE.MathUtils.lerp(0.05, 0.30, springiness);
   rope.vibrationAge = 0;
   const pan = THREE.MathUtils.clamp((rope.start.y + rope.end.y) / 10, -0.75, 0.75);
-  pluckString(rope.length, rope.tension, strength, rope.tone, rope.resonance, pan, rope.variant);
+  pluckString(
+    rope.length,
+    rope.tension,
+    strength,
+    rope.tone,
+    rope.resonance,
+    pan,
+    rope.variant,
+    rope.soundId,
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -655,11 +671,58 @@ function selectRope(rope) {
     setRangeValue('tension', Math.round(rope.tension * 100));
     setRangeValue('tone',    Math.round(rope.tone * 100));
   }
+  renderRopeMixer();
 }
 
 function updateRopeCount() {
   document.querySelector('#rope-count').textContent = String(ropes.length).padStart(2, '0');
   document.body.classList.toggle('has-fibers', ropes.length > 0);
+}
+
+function renderRopeMixer() {
+  const list = document.querySelector('#rope-mixer-list');
+  if (!list) return;
+  list.replaceChildren();
+
+  if (ropes.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'rope-mixer-empty';
+    empty.textContent = 'Todavia no hay cuerdas.';
+    list.append(empty);
+    return;
+  }
+
+  ropes.forEach(rope => {
+    const item = document.createElement('div');
+    item.className = 'rope-mixer-item';
+    item.classList.toggle('is-selected', rope === selectedRope);
+
+    const selectButton = document.createElement('button');
+    selectButton.className = 'rope-mixer-select';
+    selectButton.type = 'button';
+    selectButton.dataset.ropeId = String(rope.id);
+    selectButton.textContent = `CUERDA ${String(rope.id + 1).padStart(2, '0')}`;
+
+    const note = document.createElement('span');
+    note.className = 'rope-mixer-note';
+    note.textContent = describeString(rope.length, rope.tension, rope.variant).note;
+    selectButton.append(note);
+
+    const soundSelect = document.createElement('select');
+    soundSelect.className = 'env-select rope-sound-select';
+    soundSelect.dataset.ropeId = String(rope.id);
+    soundSelect.setAttribute('aria-label', `Timbre de cuerda ${rope.id + 1}`);
+    soundTemplates.forEach(template => {
+      const option = document.createElement('option');
+      option.value = template.id;
+      option.textContent = template.name;
+      option.selected = template.id === rope.soundId;
+      soundSelect.append(option);
+    });
+
+    item.append(selectButton, soundSelect);
+    list.append(item);
+  });
 }
 
 function setRangeValue(id, value) {
@@ -836,7 +899,17 @@ window.addEventListener('pointermove', event => {
         const velocity = Math.min(1.0, 0.06 + pointerSpeed * 0.14);
         const pan = THREE.MathUtils.clamp((hoveredRope.start.y + hoveredRope.end.y) / 10, -0.75, 0.75);
         scareInsectsOnRope(hoveredRope);
-        hoverString(hoveredRope.id, hoveredRope.length, hoveredRope.tension, hoveredRope.variant, pan, velocity);
+        hoverString(
+          hoveredRope.id,
+          hoveredRope.length,
+          hoveredRope.tension,
+          hoveredRope.variant,
+          pan,
+          velocity,
+          hoveredRope.soundId,
+          hoveredRope.tone,
+          hoveredRope.resonance,
+        );
         if (hoveredRope.vibration < 0.028) {
           hoveredRope.vibration  = 0.028 + velocity * 0.045;
           hoveredRope.vibrationAge = 0;
@@ -925,7 +998,14 @@ document.querySelector('#tension').addEventListener('input', event => {
   document.querySelector('#note-name').textContent = describeString(
     selectedRope.length, selectedRope.tension, selectedRope.variant,
   ).note;
-  playTension(selectedRope.length, selectedRope.tension, selectedRope.tone, selectedRope.variant);
+  renderRopeMixer();
+  playTension(
+    selectedRope.length,
+    selectedRope.tension,
+    selectedRope.tone,
+    selectedRope.variant,
+    selectedRope.soundId,
+  );
 });
 
 document.querySelector('#tone').addEventListener('input', event => {
@@ -935,12 +1015,62 @@ document.querySelector('#tone').addEventListener('input', event => {
 });
 
 let soundMuted = false;
-document.querySelector('#sound-toggle').addEventListener('click', event => {
+function updateMuteControls() {
+  const topToggle = document.querySelector('#sound-toggle');
+  const masterToggle = document.querySelector('#master-mute');
+  topToggle.setAttribute('aria-pressed', String(soundMuted));
+  topToggle.lastChild.textContent = soundMuted ? ' silencio' : ' sonido';
+  masterToggle.setAttribute('aria-pressed', String(soundMuted));
+  masterToggle.textContent = soundMuted ? 'MUTE' : 'ON';
+}
+
+function toggleMasterMute() {
   initAudio();
   soundMuted = !soundMuted;
   setMuted(soundMuted);
-  event.currentTarget.setAttribute('aria-pressed', String(soundMuted));
-  event.currentTarget.lastChild.textContent = soundMuted ? ' silencio' : ' sonido';
+  updateMuteControls();
+}
+
+document.querySelector('#sound-toggle').addEventListener('click', toggleMasterMute);
+document.querySelector('#master-mute').addEventListener('click', toggleMasterMute);
+
+document.querySelector('#master-volume').addEventListener('input', event => {
+  initAudio();
+  setMasterVolume(Number(event.target.value) / 100);
+  setEnvRangeValue('master-volume', event.target.value);
+});
+
+document.querySelector('#master-reverb').addEventListener('input', event => {
+  initAudio();
+  setMasterReverb(Number(event.target.value) / 100);
+  setEnvRangeValue('master-reverb', event.target.value);
+});
+
+document.querySelector('#master-delay').addEventListener('input', event => {
+  initAudio();
+  setMasterDelay(Number(event.target.value) / 100);
+  setEnvRangeValue('master-delay', event.target.value);
+});
+
+['master-volume', 'master-reverb', 'master-delay'].forEach(id => {
+  setEnvRangeValue(id, document.querySelector(`#${id}`).value);
+});
+
+document.querySelector('#rope-mixer-list').addEventListener('click', event => {
+  const button = event.target.closest('.rope-mixer-select');
+  if (!button) return;
+  const rope = ropes.find(candidate => candidate.id === Number(button.dataset.ropeId));
+  if (rope) selectRope(rope);
+});
+
+document.querySelector('#rope-mixer-list').addEventListener('change', event => {
+  if (!event.target.matches('.rope-sound-select')) return;
+  const rope = ropes.find(candidate => candidate.id === Number(event.target.dataset.ropeId));
+  if (!rope) return;
+  initAudio();
+  rope.soundId = event.target.value;
+  selectRope(rope);
+  pluck(rope, 0.62);
 });
 
 window.addEventListener('resize', () => {
@@ -1112,7 +1242,7 @@ function animate(now = performance.now()) {
       rainAccumulator--;
       const rope = ropes[Math.floor(Math.random() * ropes.length)];
       const pan  = THREE.MathUtils.clamp((rope.start.y + rope.end.y) / 10, -0.75, 0.75);
-      rainDropSound(rope.length, rope.tension, rope.variant, pan);
+      rainDropSound(rope.length, rope.tension, rope.variant, pan, rope.soundId, rope.tone);
       rope.vibration    = Math.max(rope.vibration, 0.005 + Math.random() * 0.008);
       rope.vibrationAge = 0;
     }
@@ -1127,7 +1257,16 @@ function animate(now = performance.now()) {
       const pan  = THREE.MathUtils.clamp((rope.start.y + rope.end.y) / 10, -0.75, 0.75);
       // Punteo muy suave — la cuerda "canta" con el viento
       const vel = 0.04 + Math.random() * 0.10 * windStrength;
-      pluckString(rope.length, rope.tension, vel, rope.tone, rope.resonance + 0.15, pan, rope.variant);
+      pluckString(
+        rope.length,
+        rope.tension,
+        vel,
+        rope.tone,
+        rope.resonance + 0.15,
+        pan,
+        rope.variant,
+        rope.soundId,
+      );
       // Vibración visual mínima
       if (rope.vibration < 0.012) {
         rope.vibration    = 0.005 + windStrength * 0.012;

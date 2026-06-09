@@ -58,6 +58,31 @@
           <small>generador ambiental</small>
         </div>
 
+        <div class="env-group-label">CUERDAS / TIMBRES</div>
+        <div id="rope-mixer-list" class="rope-mixer-list">
+          <p class="rope-mixer-empty">Todavia no hay cuerdas.</p>
+        </div>
+
+        <div class="env-group-label">MASTER</div>
+        <div class="env-section">
+          <div class="env-row">
+            <span>VOLUMEN</span>
+            <button id="master-mute" class="tog-btn" type="button" aria-pressed="false">ON</button>
+          </div>
+          <input id="master-volume" class="env-slider" type="range" min="0" max="100" value="70">
+          <div class="env-hint">silencio · maximo</div>
+        </div>
+        <div class="env-section">
+          <div class="env-label">REVERB</div>
+          <input id="master-reverb" class="env-slider" type="range" min="0" max="100" value="24">
+          <div class="env-hint">seco · profundo</div>
+        </div>
+        <div class="env-section">
+          <div class="env-label">DELAY</div>
+          <input id="master-delay" class="env-slider" type="range" min="0" max="100" value="18">
+          <div class="env-hint">directo · eco</div>
+        </div>
+
         <div class="env-group-label">CLIMA</div>
         <div class="env-section">
           <div class="env-row">
