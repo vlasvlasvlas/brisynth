@@ -72,11 +72,28 @@ let rainLevel          = 0.55;
 let rainAccumulator    = 0;
 let aeolianAccumulator = 0;
 let springiness        = 0.22;  // 0 = soga muerta / 1 = muy elástica
+let faunaEnabled       = true;
+let faunaDensity       = 0.42;
 
 // ── Rain particles ────────────────────────────────────────────────────────────
 const RAIN_COUNT = 350;
 let rainParticles = null;
 let rainPositions = null;
+
+// ── Fauna musical ─────────────────────────────────────────────────────────────
+const insects = [];
+let insectTexture = null;
+new THREE.TextureLoader().load(
+  `${import.meta.env.BASE_URL}sprites/insects.png`,
+  texture => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    insectTexture = texture;
+    syncInsectPopulation();
+  },
+);
 
 // ── Material de rejas — contraste alto ───────────────────────────────────────
 const ironMat = new THREE.MeshStandardMaterial({
@@ -213,6 +230,11 @@ function ropePoints(rope, time = 0) {
   return points;
 }
 
+function ropePointAt(rope, t, time = 0) {
+  const curve = new THREE.CatmullRomCurve3(ropePoints(rope, time));
+  return curve.getPoint(THREE.MathUtils.clamp(t, 0, 1));
+}
+
 function rebuildRope(rope, time = 0) {
   const curve = new THREE.CatmullRomCurve3(ropePoints(rope, time));
   const geo   = new THREE.TubeGeometry(curve, 60, rope === selectedRope ? 0.078 : 0.062, 8, false);
@@ -300,6 +322,9 @@ function createRope(startAnchor, endAnchor, physicalTension = 0.65) {
 
 function removeRope(rope) {
   if (!rope) return;
+  insects
+    .filter(insect => insect.rope === rope)
+    .forEach(insect => launchInsect(insect, rope));
   world.remove(rope.mesh, rope.glow, rope.knotA, rope.knotB);
   rope.mesh.geometry.dispose(); rope.mesh.material.dispose();
   rope.glow.geometry.dispose(); rope.glow.material.dispose();
@@ -372,6 +397,182 @@ function setRainEnabled(on) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+//  FAUNA MUSICAL — mariposas y polillas que secuencian las cuerdas
+// ═════════════════════════════════════════════════════════════════════════════
+function createInsectTexture(index) {
+  const texture = insectTexture.clone();
+  texture.needsUpdate = true;
+  texture.repeat.set(0.5, 0.5);
+  texture.offset.set(index % 2 === 0 ? 0 : 0.5, index < 2 ? 0.5 : 0);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  return texture;
+}
+
+function randomInsectWaypoint() {
+  return new THREE.Vector3(
+    THREE.MathUtils.randFloat(-7.2, 7.2),
+    THREE.MathUtils.randFloat(-4.8, 5.4),
+    THREE.MathUtils.randFloat(0.75, 1.3),
+  );
+}
+
+function createInsect(index) {
+  const map = createInsectTexture(index % 4);
+  const material = new THREE.SpriteMaterial({
+    map,
+    transparent: true,
+    alphaTest: 0.12,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const sprite = new THREE.Sprite(material);
+  const baseScale = THREE.MathUtils.randFloat(0.82, 1.15);
+  sprite.scale.set(baseScale, baseScale, 1);
+  sprite.center.set(0.5, 0.22);
+  sprite.position.copy(randomInsectWaypoint());
+  sprite.position.x = Math.random() < 0.5 ? -10 : 10;
+  world.add(sprite);
+
+  const insect = {
+    sprite,
+    baseScale,
+    phase: Math.random() * Math.PI * 2,
+    velocity: new THREE.Vector3(),
+    waypoint: randomInsectWaypoint(),
+    rope: null,
+    ropeT: 0.5,
+    state: 'flying',
+    flightAge: 0,
+    destinationDelay: Math.random() * 2,
+    perchTime: 0,
+    avoidRope: null,
+  };
+  sprite.userData.insect = insect;
+  insects.push(insect);
+}
+
+function destroyInsect(insect) {
+  world.remove(insect.sprite);
+  insect.sprite.material.map.dispose();
+  insect.sprite.material.dispose();
+  const index = insects.indexOf(insect);
+  if (index >= 0) insects.splice(index, 1);
+}
+
+function syncInsectPopulation() {
+  const desired = faunaEnabled && insectTexture
+    ? 1 + Math.floor(faunaDensity * 6)
+    : 0;
+  while (insects.length < desired) createInsect(insects.length);
+  while (insects.length > desired) destroyInsect(insects.at(-1));
+}
+
+function chooseInsectRope(insect, avoidRope = null) {
+  const available = ropes.filter(rope => rope !== avoidRope || ropes.length === 1);
+  insect.rope = available.length
+    ? available[Math.floor(Math.random() * available.length)]
+    : null;
+  insect.ropeT = THREE.MathUtils.randFloat(0.14, 0.86);
+  insect.waypoint.copy(randomInsectWaypoint());
+}
+
+function launchInsect(insect, avoidRope = null) {
+  insect.state = 'flying';
+  insect.flightAge = 0;
+  insect.perchTime = 0;
+  insect.rope = null;
+  insect.destinationDelay = THREE.MathUtils.randFloat(0.35, 1.15);
+  insect.velocity.set(
+    THREE.MathUtils.randFloat(-2.8, 2.8),
+    THREE.MathUtils.randFloat(1.1, 3.6),
+    0,
+  );
+  insect.avoidRope = avoidRope;
+}
+
+function scareInsectsOnRope(rope) {
+  insects
+    .filter(insect => insect.state === 'perched' && insect.rope === rope)
+    .forEach(insect => launchInsect(insect, rope));
+}
+
+function landInsect(insect, time) {
+  if (!insect.rope || !ropes.includes(insect.rope)) return;
+  insect.state = 'perched';
+  insect.velocity.set(0, 0, 0);
+  insect.perchTime = THREE.MathUtils.randFloat(6, 16);
+  insect.sprite.position.copy(ropePointAt(insect.rope, insect.ropeT, time));
+  insect.sprite.position.z = 0.78;
+  pluck(insect.rope, THREE.MathUtils.randFloat(0.12, 0.28));
+}
+
+function updateInsects(delta, time) {
+  insects.forEach(insect => {
+    insect.phase += delta * (insect.state === 'flying' ? 10 : 2.4);
+
+    if (insect.state === 'perched') {
+      if (!insect.rope || !ropes.includes(insect.rope)) {
+        launchInsect(insect);
+        return;
+      }
+
+      const point = ropePointAt(insect.rope, insect.ropeT, time);
+      insect.sprite.position.copy(point);
+      insect.sprite.position.y += 0.10;
+      insect.sprite.position.z = 0.78;
+      insect.sprite.scale.set(
+        insect.baseScale * (0.96 + Math.sin(insect.phase) * 0.025),
+        insect.baseScale,
+        1,
+      );
+      insect.perchTime -= delta;
+
+      const gust = windEnabled && Math.random() < delta * windStrength * 0.48;
+      if (gust || insect.perchTime <= 0) launchInsect(insect, insect.rope);
+      return;
+    }
+
+    insect.flightAge += delta;
+    insect.destinationDelay -= delta;
+    if (!insect.rope && insect.destinationDelay <= 0 && ropes.length > 0) {
+      chooseInsectRope(insect, insect.avoidRope);
+      insect.avoidRope = null;
+    }
+    if (insect.rope && !ropes.includes(insect.rope)) insect.rope = null;
+
+    const target = insect.rope
+      ? ropePointAt(insect.rope, insect.ropeT, time)
+      : insect.waypoint.clone();
+    target.z = 0.92;
+
+    const toTarget = target.clone().sub(insect.sprite.position);
+    const distance = toTarget.length();
+    if (!insect.rope && distance < 0.55) insect.waypoint.copy(randomInsectWaypoint());
+
+    const speed = 1.5 + Math.min(distance, 3) * 0.72 + (windEnabled ? windStrength * 1.3 : 0);
+    const desiredVelocity = distance > 0.001
+      ? toTarget.normalize().multiplyScalar(speed)
+      : new THREE.Vector3();
+    desiredVelocity.y += Math.sin(insect.phase * 0.73) * 0.65;
+    if (windEnabled) {
+      desiredVelocity.x += windStrength * (0.7 + Math.sin(time * 1.8 + insect.phase) * 0.8);
+    }
+
+    insect.velocity.lerp(desiredVelocity, Math.min(1, delta * 2.7));
+    insect.sprite.position.addScaledVector(insect.velocity, delta);
+    const flap = 0.72 + Math.abs(Math.sin(insect.phase)) * 0.28;
+    insect.sprite.scale.set(insect.baseScale, insect.baseScale * flap, 1);
+    insect.sprite.material.rotation = Math.sin(insect.phase * 0.31) * 0.08;
+
+    if (insect.rope && distance < 0.24 && insect.flightAge > 0.65) landInsect(insect, time);
+  });
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 //  UI
 // ═════════════════════════════════════════════════════════════════════════════
 function selectRope(rope) {
@@ -389,7 +590,6 @@ function selectRope(rope) {
   if (rope) {
     document.querySelector('#note-name').textContent = describeString(rope.length, rope.tension, rope.variant).note;
     setRangeValue('tension', Math.round(rope.tension * 100));
-    setRangeValue('damping', Math.round(rope.resonance * 100));
     setRangeValue('tone',    Math.round(rope.tone * 100));
   }
 }
@@ -425,9 +625,9 @@ function setInstruction(copy, active = false) {
 
 function setMode(nextMode) {
   mode = nextMode;
-  if (mode === 'dragging') {
-    setInstruction('Soltá en la reja derecha', true);
-    canvas.style.cursor = 'grabbing';
+  if (mode === 'placing') {
+    setInstruction('Elegí un gancho de la reja derecha', true);
+    canvas.style.cursor = 'crosshair';
   } else {
     setInstruction('', false);
     canvas.style.cursor = 'default';
@@ -485,6 +685,20 @@ function clearDraft() {
   draft = null;
 }
 
+function finishDraft(endAnchor) {
+  if (!draft || !endAnchor) return;
+  const finalDist = draft.start.distanceTo(endAnchor.position);
+  const finalTension = THREE.MathUtils.clamp(
+    (finalDist - draft.restLength) / draft.maxStretch, 0.04, 1,
+  );
+  const rope = createRope(draft.startAnchor, endAnchor, finalTension);
+  resetHover();
+  clearDraft();
+  playTieSound('right');
+  pluck(rope, 0.74);
+  setMode('idle');
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 //  POINTER
 // ═════════════════════════════════════════════════════════════════════════════
@@ -511,7 +725,7 @@ function resetHover() {
   anchors.right.forEach(hb => {
     const ring = hb.userData.ring;
     if (ring) {
-      ring.material.emissive.set(mode === 'dragging' ? new THREE.Color(0x0a1828) : new THREE.Color(0x000000));
+      ring.material.emissive.set(mode === 'placing' ? new THREE.Color(0x0a1828) : new THREE.Color(0x000000));
       ring.material.emissiveIntensity = 0.18;
       ring.scale.setScalar(1);
     }
@@ -531,6 +745,11 @@ window.addEventListener('pointermove', event => {
   hoveredRope   = null;
 
   if (mode === 'idle') {
+    const insectHit = raycaster.intersectObjects(insects.map(insect => insect.sprite), false)[0];
+    if (insectHit) {
+      const insect = insectHit.object.userData.insect;
+      if (insect.state === 'perched') launchInsect(insect, insect.rope);
+    }
     const leftHit = raycaster.intersectObjects(anchors.left, false)[0];
     if (leftHit) {
       hoveredAnchor = leftHit.object;
@@ -548,23 +767,26 @@ window.addEventListener('pointermove', event => {
       hoveredRope = ropeHit.object.userData.rope;
       hoveredRope.mesh.material.emissiveIntensity = 0.55;
       hoveredRope.glow.material.opacity = 0.10;
-      if (!leftHit) canvas.style.cursor = 'pointer';
+      if (!leftHit && !insectHit) canvas.style.cursor = 'pointer';
 
       if (pointerSpeed > 0.07) {
         const velocity = Math.min(1.0, 0.06 + pointerSpeed * 0.14);
         const pan = THREE.MathUtils.clamp((hoveredRope.start.y + hoveredRope.end.y) / 10, -0.75, 0.75);
+        scareInsectsOnRope(hoveredRope);
         hoverString(hoveredRope.id, hoveredRope.length, hoveredRope.tension, hoveredRope.variant, pan, velocity);
         if (hoveredRope.vibration < 0.028) {
           hoveredRope.vibration  = 0.028 + velocity * 0.045;
           hoveredRope.vibrationAge = 0;
         }
       }
-    } else if (!leftHit) {
+    } else if (!leftHit && !insectHit) {
       canvas.style.cursor = 'default';
     }
+
+    if (insectHit) canvas.style.cursor = 'pointer';
   }
 
-  if (mode === 'dragging' && draft) {
+  if (mode === 'placing' && draft) {
     const rightHit = raycaster.intersectObjects(anchors.right, false)[0];
     if (rightHit) {
       hoveredAnchor = rightHit.object;
@@ -576,7 +798,7 @@ window.addEventListener('pointermove', event => {
       }
       canvas.style.cursor = 'crosshair';
     } else {
-      canvas.style.cursor = 'grabbing';
+      canvas.style.cursor = 'crosshair';
     }
     draft.targetEnd.copy(hoveredAnchor ? hoveredAnchor.position : pointerWorld);
   }
@@ -587,13 +809,26 @@ window.addEventListener('pointerdown', event => {
   initAudio();
   updatePointer(event);
 
+  if (mode === 'placing' && draft) {
+    const rightHit = raycaster.intersectObjects(anchors.right, false)[0];
+    if (rightHit) finishDraft(rightHit.object);
+    return;
+  }
+
   if (mode === 'idle') {
+    const insectHit = raycaster.intersectObjects(insects.map(insect => insect.sprite), false)[0];
+    if (insectHit) {
+      const insect = insectHit.object.userData.insect;
+      launchInsect(insect, insect.rope);
+      return;
+    }
+
     const leftHit = raycaster.intersectObjects(anchors.left, false)[0];
     if (leftHit) {
       hoveredAnchor = leftHit.object;
       startDraft(hoveredAnchor);
       playTieSound('left');
-      setMode('dragging');
+      setMode('placing');
       return;
     }
 
@@ -601,33 +836,13 @@ window.addEventListener('pointerdown', event => {
     if (ropeHit) {
       const r = ropeHit.object.userData.rope;
       selectRope(r);
+      scareInsectsOnRope(r);
       pluck(r, Math.min(1, 0.48 + pointerSpeed * 0.2));
     } else {
       // toco el fondo — deseleccionar y ocultar panel
       selectRope(null);
     }
   }
-});
-
-window.addEventListener('pointerup', event => {
-  if (mode !== 'dragging' || !draft) return;
-  updatePointer(event);
-
-  const rightHit = raycaster.intersectObjects(anchors.right, false)[0];
-  if (rightHit) {
-    const finalDist    = draft.start.distanceTo(rightHit.object.position);
-    const finalTension = THREE.MathUtils.clamp(
-      (finalDist - draft.restLength) / draft.maxStretch, 0.04, 1,
-    );
-    const rope = createRope(draft.startAnchor, rightHit.object, finalTension);
-    resetHover();
-    clearDraft();
-    playTieSound('right');
-    pluck(rope, 0.74);
-  } else {
-    clearDraft();
-  }
-  setMode('idle');
 });
 
 window.addEventListener('keydown', event => {
@@ -647,12 +862,6 @@ document.querySelector('#tension').addEventListener('input', event => {
     selectedRope.length, selectedRope.tension, selectedRope.variant,
   ).note;
   playTension(selectedRope.length, selectedRope.tension, selectedRope.tone, selectedRope.variant);
-});
-
-document.querySelector('#damping').addEventListener('input', event => {
-  if (!selectedRope) return;
-  selectedRope.resonance = Number(event.target.value) / 100;
-  setRangeValue('damping', event.target.value);
 });
 
 document.querySelector('#tone').addEventListener('input', event => {
@@ -742,6 +951,23 @@ document.querySelector('#rain-intensity').addEventListener('input', event => {
 });
 setEnvRangeValue('rain-intensity', document.querySelector('#rain-intensity').value);
 
+// Fauna musical
+document.querySelector('#fauna-toggle').addEventListener('click', event => {
+  initAudio();
+  faunaEnabled = !faunaEnabled;
+  event.currentTarget.setAttribute('aria-pressed', String(faunaEnabled));
+  event.currentTarget.textContent = faunaEnabled ? 'ON' : 'OFF';
+  document.querySelector('#fauna-density').disabled = !faunaEnabled;
+  syncInsectPopulation();
+});
+
+document.querySelector('#fauna-density').addEventListener('input', event => {
+  faunaDensity = Number(event.target.value) / 100;
+  setEnvRangeValue('fauna-density', event.target.value);
+  syncInsectPopulation();
+});
+setEnvRangeValue('fauna-density', document.querySelector('#fauna-density').value);
+
 // Escala musical
 document.querySelector('#scale-select').addEventListener('change', event => {
   setScale(event.target.value);
@@ -790,7 +1016,7 @@ updateWeather();
 createRainParticles();
 setMode('idle');
 updateRopeCount();
-['tension', 'damping', 'tone'].forEach(id => setRangeValue(id, document.querySelector(`#${id}`).value));
+['tension', 'tone'].forEach(id => setRangeValue(id, document.querySelector(`#${id}`).value));
 
 let lastFrame  = performance.now();
 let elapsedTime = 0;
@@ -845,6 +1071,8 @@ function animate(now = performance.now()) {
       }
     }
   }
+
+  updateInsects(delta, time);
 
   // Física del draft
   if (draft) {
